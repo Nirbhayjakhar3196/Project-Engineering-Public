@@ -14,7 +14,12 @@
       }
 
       
-      
+      const hashedPassword = await bcrypt.hash(password, 10) // This line is actually hashing the password, but let's assume it's not used in the User model
+      const user = await User.create({
+        email,
+        password:hashedPassword
+      })
+
       const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
         expiresIn: '7d',
       })
@@ -37,7 +42,13 @@
       }
 
       // Direct string comparison — unsafe
-      
+      const isMatch = await bcrypt.compare(password,user.password)
+
+      if(!isMatch){
+        return res.status(401).json({
+          message : "Invalid Credentials"
+        })
+      }
 
       const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
         expiresIn: '7d',
