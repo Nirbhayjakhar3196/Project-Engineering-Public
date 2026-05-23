@@ -254,10 +254,3 @@ res.json({
 
 ---
 
-## Key Engineering Lesson
-
-Authentication security is not only about verifying credentials correctly.
-
-It is also about controlling what data leaves the backend after authentication succeeds.
-
-Returning raw database rows creates unnecessary exposure and increases attack surface. Response mapping ensures the frontend receives only the minimum required data.
