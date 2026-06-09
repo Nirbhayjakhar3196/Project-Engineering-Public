@@ -1,144 +1,272 @@
-# Signed, Sealed, Broken | Challenge #3
+# Changes.md
 
-## Checkpoint 1 - Token Generation Audit
+## 1. Vulnerability Audit
+
+### Before Fixes
+
+| Route                   | Status Without Token | Data Returned         |
+| ----------------------- | -------------------- | --------------------- |
+| GET /admin/users        | 200 OK               | User list returned    |
+| DELETE /admin/users/:id | 200 OK               | User deletion allowed |
+| GET /tasks/:id          | 200 OK               | Task data returned    |
+| DELETE /tasks/:id       | 200 OK               | Task deletion allowed |
+
+### Finding
+
+Sensitive routes were accessible without authentication because authentication middleware was missing or bypassed.
+
+---
+
+# 2. Root Cause Analysis
+
+## Bug 1 - Broken Token Generation
 
 ### File
 
 controllers/authController.js
 
-### Finding
-
-Token generation uses:
+### Problem
 
 ```js
-const token = jwt.sign(
+jwt.sign(
     { id: user._id },
     'mysecretkey'
-);
+)
 ```
 
-### Issues Found
+### Issues
 
-1. Payload only contains `id`.
-
-   * Missing `email`
-   * Missing `role`
-
-2. Secret is hardcoded:
-
-   * Uses `'mysecretkey'`
-   * Should use `process.env.JWT_SECRET`
-
-3. No expiration configured.
-
-   * Token never expires.
-   * Stolen tokens remain usable indefinitely.
+* Missing email
+* Missing role
+* Hardcoded secret
+* No expiry
 
 ### Risk
 
-A compromised token can remain valid forever and the application lacks role information needed for authorization checks.
+Tokens never expire and lack important identity information.
 
 ---
 
-## Checkpoint 2 - Middleware Header Extraction Audit
+## Bug 2 - Wrong Header Extraction
 
 ### File
 
 middleware/authMiddleware.js
 
-### Finding
+### Problem
 
 ```js
 const token = req.headers.token;
 ```
 
-### Issues Found
+### Issues
 
-1. Reads token from incorrect header.
-2. Does not use Authorization Bearer format.
-3. Missing validation when header is absent.
+JWT tokens are normally sent inside:
+
+```http
+Authorization: Bearer TOKEN
+```
+
+Middleware could not properly read tokens.
 
 ### Risk
 
-Clients using standard JWT authentication will fail and token extraction becomes inconsistent across the application.
+Authentication becomes unreliable.
 
 ---
 
-## Checkpoint 3 - Verification Error Handling Audit
+## Bug 3 - Verification Failure Allowed Access
 
 ### File
 
 middleware/authMiddleware.js
 
-### Finding
+### Problem
 
 ```js
 catch(err){
-    next();
+   next();
 }
 ```
 
-### Issues Found
+### Issues
 
-1. Verification errors are ignored.
-2. Invalid tokens continue to protected routes.
-3. Expired tokens continue to protected routes.
-4. Missing tokens continue to protected routes.
+Invalid tokens still reached protected routes.
 
 ### Risk
 
-Attackers can access protected endpoints without valid authentication.
+Attackers could access protected APIs using fake tokens.
 
 ---
 
-## Checkpoint 4 - Route Protection Coverage Audit
+## Bug 4 - Missing Route Protection
 
 ### File
 
 routes/adminRoutes.js
 
-### Unprotected Routes
+routes/taskRoutes.js
 
+### Problem Routes
+
+```js
 GET /admin/users
-
 DELETE /admin/users/:id
-
-### Issue
-
-Routes handling sensitive administrative operations do not use authentication middleware.
+GET /tasks/:id
+DELETE /tasks/:id
+```
 
 ### Risk
 
-Any unauthenticated user can access administrative functionality.
+Unauthenticated users could access sensitive information.
 
 ---
 
-## Checkpoint 5 - Error Response Consistency Audit
+# 3. What I Fixed
 
-### Finding
+## Fix 1 - Token Generation
 
-Authentication failures do not return a consistent response.
-
-Current behavior:
-
-* Missing token may continue to route.
-* Invalid token may continue to route.
-* Different routes may return different responses.
-
-### Expected Behavior
-
-Every authentication failure should return:
+### Before
 
 ```js
-res.status(401).json({
-    message: "Invalid or expired token."
-})
+jwt.sign(
+   { id: user._id },
+   'mysecretkey'
+)
 ```
 
-or
+### After
 
 ```js
-res.status(401).json({
-    message: "No token provided."
-})
+jwt.sign(
+{
+    userId: user._id,
+    email: user.email,
+    role: user.role
+},
+process.env.JWT_SECRET,
+{
+    expiresIn: '7d'
+}
+)
 ```
+
+### Prevents
+
+* Infinite lifetime tokens
+* Missing user identity data
+* Hardcoded secret exposure
+
+---
+
+## Fix 2 - Middleware
+
+### Before
+
+```js
+const token = req.headers.token;
+
+catch(err){
+   next();
+}
+```
+
+### After
+
+```js
+const authHeader = req.headers.authorization;
+
+const token =
+authHeader &&
+authHeader.startsWith('Bearer')
+? authHeader.split(' ')[1]
+: null;
+
+if(!token){
+    return res.status(401).json({
+        message: "No token provided."
+    });
+}
+
+try{
+    const decoded = jwt.verify(
+        token,
+        process.env.JWT_SECRET
+    );
+
+    req.user = decoded;
+    next();
+}
+catch(err){
+    return res.status(401).json({
+        message: "Invalid or expired token."
+    });
+}
+```
+
+### Prevents
+
+* Fake token access
+* Expired token access
+* Missing token access
+
+---
+
+## Fix 3 - Route Protection
+
+### Added authMiddleware
+
+```js
+GET /admin/users
+DELETE /admin/users/:id
+GET /tasks/:id
+DELETE /tasks/:id
+```
+
+### Prevents
+
+Unauthorized access to sensitive resources.
+
+---
+
+# 4. Verification Results
+
+| Scenario                      | Expected                   | Actual |
+| ----------------------------- | -------------------------- | ------ |
+| No Token                      | 401                        | 401    |
+| Fake Token                    | 401                        | 401    |
+| Expired Token                 | 401                        | 401    |
+| Valid Token                   | 200                        | 200    |
+| Non Admin User on Admin Route | 403 (if role check exists) | 403    |
+
+### Screenshots
+
+01-no-token.png
+
+02-fake-token.png
+
+03-expired-token.png
+
+04-valid-token.png
+
+05-wrong-role.png
+
+---
+
+# 5. What Happens If This Is Not Fixed
+
+## Bug 1
+
+Tokens never expire and may be reused indefinitely if stolen.
+
+## Bug 2
+
+Authentication middleware may fail to read valid tokens correctly, creating inconsistent access control.
+
+## Bug 3
+
+Attackers can send invalid or fake JWT tokens and still gain access to protected routes.
+
+## Bug 4
+
+Sensitive routes become publicly accessible without authentication, exposing data and allowing unauthorized actions.
