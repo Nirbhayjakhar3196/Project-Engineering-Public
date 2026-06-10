@@ -18,10 +18,19 @@ module.exports = (req, res, next) => {
         // Note: For Bug 3 to be most effective, we'll try verifying even undefined tokens if present.
     }
 
+    
+
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = decoded;
-        next();
+        console.log(decoded); // ADD THIS
+
+        req.user = {
+            id: decoded.userId,
+            email: decoded.email,
+            role: decoded.role
+        };
+
+        next(); 
     } catch (err) {
         // ❌ Bug 3: next() called in catch block
         // Bad tokens (or missing tokens if verification fails) pass through to the route handler.
