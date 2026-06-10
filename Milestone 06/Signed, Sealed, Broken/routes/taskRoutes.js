@@ -13,7 +13,7 @@ const {
 router.get('/tasks', authMiddleware, getTasks);      // ✅ protected
 router.post('/tasks', authMiddleware, createTask);   // ✅ protected
 router.put('/tasks/:id', authMiddleware, updateTask); // ✅ protected
-router.get('/tasks/:id', getTaskById);               // ❌ missing authMiddleware
-router.delete('/tasks/:id', deleteTask);             // ❌ missing authMiddleware
+router.get('/tasks/:id',authMiddleware , getTaskById);               // ❌ missing authMiddleware
+router.delete('/tasks/:id',authMiddleware, deleteTask);             // ❌ missing authMiddleware
 
 module.exports = router;

@@ -29,8 +29,16 @@ exports.login = async (req, res) => {
 
         // ❌ Bug 1: Token Generation Issues
         const token = jwt.sign(
-            { id: user._id },      // ❌ Missing email and role fields
-            'mysecretkey',         // ❌ Hardcoded secret — not from process.env
+            {
+                userId : user._id,
+                email : user.email,
+                role : user.role
+            },
+            process.env.JWT_SECRET,
+            {
+                expiresIn : '7d'
+            }
+                                 // ❌ Hardcoded secret — not from process.env
                                    // ❌ No expiresIn — token never expires
         );
 
