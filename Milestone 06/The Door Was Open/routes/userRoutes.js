@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const authenticate = require("../middleware/authenticate")
 
 /**
  * Vulnerable Routes: Missing Authentication Middleware
@@ -8,7 +9,7 @@ const router = express.Router();
  */
 
 // Private Route: Get User Profile
-router.get('/profile', (req, res) => {
+router.get('/profile', authenticate,  (req, res) => {
   // Vulnerability: No check for authentication
   res.status(200).json({ 
     user: { id: 101, username: 'student_tester', email: 'test@example.com' },
@@ -17,7 +18,7 @@ router.get('/profile', (req, res) => {
 });
 
 // Private Route: Update User Profile
-router.put('/profile', (req, res) => {
+router.put('/profile', authenticate, (req, res) => {
   const { email } = req.body;
   if (!email) {
     return res.status(400).json({ error: 'bad_request', message: 'Email address is required.' });

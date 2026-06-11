@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
+const authenticate = require("../middleware/authenticate")
 
 // Private Route: User Posts
-router.get('/my-posts', (req, res) => {
+router.get('/my-posts', authenticate , (req, res) => {
   // Vulnerability: No check for authentication
   res.status(200).json({ 
     posts: [
@@ -14,7 +15,7 @@ router.get('/my-posts', (req, res) => {
 });
 
 // Private Route: Create a New Post
-router.post('/create', (req, res) => {
+router.post('/create', authenticate, (req, res) => {
   const { title, content } = req.body;
   if (!title || !content) {
     return res.status(400).json({ error: 'bad_request', message: 'Title and content are required.' });
