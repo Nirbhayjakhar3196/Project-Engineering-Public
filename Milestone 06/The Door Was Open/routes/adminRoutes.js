@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
+const authenticate = require("../middleware/authenticate")
 
 // Private Route: Admin List Users
-router.get('/users', (req, res) => {
+router.get('/users', authenticate,  (req, res) => {
   // Vulnerability: No check for authentication
   res.status(200).json({ 
     users: [
@@ -15,7 +16,7 @@ router.get('/users', (req, res) => {
 });
 
 // Private Route: Admin Delete User
-router.delete('/users/:id', (req, res) => {
+router.delete('/users/:id', authenticate ,  (req, res) => {
   const { id } = req.params;
   // Vulnerability: No check for authentication
   res.status(200).json({ 
