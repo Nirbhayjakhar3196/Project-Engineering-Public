@@ -10,7 +10,9 @@ export const login = async (req, res) => {
   if (user && (await user.matchPassword(password))) {
     // Gap 1 — Role missing from JWT payload
     const token = jwt.sign(
-      { userId: user._id, email: user.email }, // ❌ missing role
+      { userId: user._id,
+         email: user.email,
+         role: user.role }, // ✅ role included in JWT
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -41,7 +43,9 @@ export const signup = async (req, res) => {
 
   if (user) {
     const token = jwt.sign(
-      { userId: user._id, email: user.email }, // ❌ missing role
+      { userId: user._id,
+        email: user.email,
+        role: user.role }, // ❌ missing role
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
