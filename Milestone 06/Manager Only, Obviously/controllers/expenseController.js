@@ -33,11 +33,41 @@ export const createExpense = async (req, res) => {
 // @desc    Update an expense
 // @route   PUT /api/expenses/:id
 // @access  Protected (Gap 4 — No ownership check)
-export const updateExpense = async (req, res) => {
-  // ❌ Any user can update any expense — no check: expense.submittedBy === req.user.userId
-  const expense = await Expense.findByIdAndUpdate(req.params.id, req.body, { new: true });
-  res.json(expense);
-};
+export const updateExpense = async (req,res)=>{
+
+ const expense =
+ await Expense.findById(req.params.id);
+
+ if(!expense){
+   return res.status(404).json({
+     message:"Expense not found"
+   });
+ }
+
+ const isOwner =
+   expense.submittedBy.toString() ===
+   req.user._id.toString();
+
+ const isPrivileged =
+   ["manager","admin"]
+   .includes(req.user.role);
+
+ if(!isOwner && !isPrivileged){
+   return res.status(403).json({
+     message:
+       "You can only modify your own expenses."
+   });
+ }
+
+ const updated =
+ await Expense.findByIdAndUpdate(
+   req.params.id,
+   req.body,
+   {new:true}
+ );
+
+ res.json(updated);
+}
 
 // @desc    Approve an expense
 // @route   PUT /api/expenses/:id/approve
