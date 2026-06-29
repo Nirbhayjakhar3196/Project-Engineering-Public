@@ -118,19 +118,19 @@ const EventDetail = () => {
                                 {/* RSVP Action Footer */}
                                 <div className="pt-10 flex flex-col md:flex-row gap-4 items-center border-t border-slate-100">
                                     {/* Broken Flow 5: Buttons shown regardless of permissions in starter */}
-                                    <button 
+                                    {event.isInvited && (<button 
                                         onClick={handleRSVP} 
                                         className="btn-primary w-full md:flex-1 py-4 text-lg font-bold shadow-xl shadow-blue-200"
                                     >
                                         <CheckCircle size={24} /> RSVP for Event
-                                    </button>
+                                    </button>)}
                                     
-                                    <button 
+                                    {event.isCreator && (<button 
                                         onClick={handleDelete} 
                                         className="btn-danger w-full md:w-auto h-14 md:px-6 shadow-xl shadow-red-200"
                                     >
                                         <Trash2 size={24} />
-                                    </button>
+                                    </button>)}
                                 </div>
                             </div>
 
