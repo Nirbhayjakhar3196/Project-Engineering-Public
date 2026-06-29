@@ -10,7 +10,11 @@ router.use(authMiddleware);
 // Broken Flow 3: Returns all events, including those the user is not invited to
 router.get('/', (req, res) => {
     // FIX in solution: filter events where req.user.id is creator or req.user.email is in invitedEmails
-    res.json(events);
+    const visibleEvents = events.filter(event => 
+        event.creatorId === req.user.id ||
+        event.invitedEmails.includes(req.user.email)
+    )
+    res.json(visibleEvents);
 });
 
 router.post('/', (req, res) => {
@@ -27,6 +31,7 @@ router.post('/', (req, res) => {
     events.push(newEvent);
     console.log(`Invitations sent for event "${title}" to: ${newEvent.invitedEmails.join(', ')}`);
     res.status(201).json(newEvent);
+
 });
 
 // Broken Flow 1: Any user can view any event
@@ -36,10 +41,18 @@ router.get('/:id', (req, res) => {
     
     // In starter, we don't check permissions
     // We add flags for the frontend (BROKEN Flow 5: these flags might be missing or incorrect in starter if we're not careful, but let's provide them so the UI can be broken by UI logic)
+
+    const isCreator = event.creatorId === req.user.id;;
+    const isInvited = event.invitedEmails.includes(req.user.email);
+
+    if(!isCreator && !isInvited) {
+        return res.status(403).json({ message: 'Access denied' });
+    }
+
     res.json({
         ...event,
-        isCreator: event.creatorId === req.user.id,
-        isInvited: event.invitedEmails.includes(req.user.email)
+        isCreator,
+        isInvited
     });
 });
 
@@ -47,6 +60,18 @@ router.get('/:id', (req, res) => {
 router.post('/:id/rsvp', (req, res) => {
     const event = events.find(e => e.id === req.params.id);
     if (!event) return res.status(404).json({ message: 'Event not found' });
+
+    if(!event.invitedEmails.includes(req.user.email)){
+        return res.status(403).json({
+            message : "You are not allowed in this event"
+        })
+    }
+
+    if(event.rsvps.includes(req.user.id)){
+        return res.status(400).json({
+            message: "You are already RSVP'd"
+        })
+    }
 
     // NO check for invitation or duplicate RSVP in starter
     event.rsvps.push(req.user.id);
@@ -59,6 +84,15 @@ router.delete('/:id', (req, res) => {
     if (index === -1) return res.status(404).json({ message: 'Event not found' });
 
     // In starter, no check for ownership
+
+    
+
+    if(!events.creatorId === req.user.id){
+        return res.status(403).json({
+            message : "You are not allowed to delete this event"
+        })
+    }
+
     events.splice(index, 1);
     res.json({ message: 'Event deleted' });
 });
