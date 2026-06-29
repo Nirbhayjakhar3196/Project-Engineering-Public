@@ -34,7 +34,11 @@ const Dashboard = () => {
       fetchPoll();
     }, 10000);
 
-    return () => clearInterval(intervalRef.current);
+    return () => {
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+        }
+    };
   }, []);
 
   const handleVote = async (optionId) => {
