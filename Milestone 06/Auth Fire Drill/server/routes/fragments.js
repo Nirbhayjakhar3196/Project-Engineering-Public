@@ -11,7 +11,7 @@ router.get('/', (req, res) => {
 
 // BROKEN PART 4: Missing role checks/poor validation
 // Any logged in user can add fragment (should be Contributor and above)
-router.post('/', auth, (req, res) => {
+router.post('/', auth, roleCheck(["contributor" , "curator" , "admin"]) , (req, res) => {
   const { content, parentId } = req.body;
   const newFrag = {
     id: Date.now().toString(),
@@ -27,15 +27,22 @@ router.post('/', auth, (req, res) => {
 });
 
 // BROKEN PART 4: No owner check for contributors
-router.put('/:id', auth, (req, res) => {
+router.put('/:id', auth,roleCheck(['contributor','curator','admin']), (req, res) => {
   const frag = fragments.find(f => f.id === req.params.id);
   if(!frag) return res.status(404).json({ error: 'Fragment not found' });
+
+  if( req.user.role == "contributor" && frag.userId !== req.user.userId){
+    return res.status(403).json({
+      error : "Ownership doesn't match"
+    })
+  }
+
   frag.content = req.body.content;
   res.json(frag);
 });
 
 // BROKEN PART 4: No Curator requirement
-router.post('/:id/approve', auth, (req, res) => {
+router.post('/:id/approve', auth,roleCheck(["curator" , "admin"]), (req, res) => {
   const frag = fragments.find(f => f.id === req.params.id);
   if(!frag) return res.status(404).json({ error: 'Fragment not found' });
   frag.status = 'published';
@@ -43,7 +50,7 @@ router.post('/:id/approve', auth, (req, res) => {
 });
 
 // BROKEN PART 4: Any user can delete, should be Admin only
-router.delete('/:id', auth, (req, res) => {
+router.delete('/:id', auth,roleCheck(["admin"]) ,(req, res) => {
   const index = fragments.findIndex(f => f.id === req.params.id);
   if (index === -1) return res.status(404).json({ error: 'Not found' });
   fragments.splice(index, 1);
