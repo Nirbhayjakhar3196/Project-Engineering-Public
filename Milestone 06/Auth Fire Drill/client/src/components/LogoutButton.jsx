@@ -1,19 +1,40 @@
-
+import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const LogoutButton = () => {
-    const { logout } = useAuth();
+    const { logout, token } = useAuth();
     const navigate = useNavigate();
 
-    const handleLogout = () => {
-        // BROKEN PART 6: Only frontend logic, no server-side invalidation
+    const handleLogout = async () => {
+
+        try {
+
+            await axios.post(
+                'http://localhost:5001/api/auth/logout',
+                {},
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
+
+        } catch (err) {
+            console.log(err);
+        }
+
         logout();
         navigate('/login');
+
     };
 
     return (
-        <button onClick={handleLogout} className="btn btn-outline" style={{ width: 'auto', padding: '0.5rem 1.25rem' }}>
+        <button
+            onClick={handleLogout}
+            className="btn btn-outline"
+            style={{ width: 'auto', padding: '0.5rem 1.25rem' }}
+        >
             Logout
         </button>
     );
