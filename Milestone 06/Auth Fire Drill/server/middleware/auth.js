@@ -1,20 +1,39 @@
-
 const { verifyToken } = require('../auth/jwt');
-const { blacklist } = require('../data/store');
+const blacklist = require('../data/blacklist');
 
-const auth = (req, res, next) => {
-  const token = req.headers['authorization'];
-  if(!token) return res.status(401).json({ error: 'Unauthorized' });
+module.exports = (req, res, next) => {
 
-  try {
-    const decoded = verifyToken(token.split(' ')[1]);
-    req.user = decoded; // BROKEN PART 2: req.user.role will be undefined
-    
-    // BROKEN PART 6: No blacklist check here
-    next();
-  } catch (err) {
-    res.status(401).json({ error: 'Auth failed' });
-  }
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+        return res.status(401).json({
+            error: "No token"
+        });
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    // NEW CHECK
+    if (blacklist.includes(token)) {
+        return res.status(401).json({
+            error: "Token has been revoked"
+        });
+    }
+
+    try {
+
+        const decoded = verifyToken(token);
+
+        req.user = decoded;
+
+        next();
+
+    } catch (err) {
+
+        return res.status(401).json({
+            error: "Invalid token"
+        });
+
+    }
+
 };
-
-module.exports = auth;

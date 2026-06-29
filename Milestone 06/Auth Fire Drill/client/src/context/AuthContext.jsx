@@ -1,30 +1,47 @@
 
 import { createContext, useContext, useState, useEffect } from 'react';
+import { jwtDecode } from "jwt-decode";
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
-  const [role, setRole] = useState(localStorage.getItem('role')); // BROKEN PART 3: Storing role in localStorage
+  const [role, setRole] = useState(null); // BROKEN PART 3: Storing role in localStorage
 
   useEffect(() => {
-    if(token && role) {
-        setUser({ token, role });
+
+    if (token) {
+
+        const decoded = jwtDecode(token);
+
+        setRole(decoded.role);
+
+        setUser({
+            id: decoded.userId,
+            role: decoded.role
+        });
+
     }
-  }, [token, role]);
+
+}, [token]);
 
   const login = (data) => {
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('role', data.user.role); // BROKEN PART 3: Storing role in localStorage
+    localStorage.setItem("token", data.token);
+
+    const decoded = jwtDecode(data.token);
+
     setToken(data.token);
-    setRole(data.user.role);
-    setUser(data.user);
+    setRole(decoded.role);
+
+    setUser({
+        id: decoded.userId,
+        role: decoded.role
+    });
   };
 
   const logout = () => {
     localStorage.removeItem('token');
-    localStorage.removeItem('role');
     setToken(null);
     setRole(null);
     setUser(null);
