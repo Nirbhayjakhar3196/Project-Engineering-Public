@@ -17,4 +17,22 @@ client.interceptors.request.use((config) => {
 // The student should implement a response interceptor to handle 401 status.
 // Currently, error handling is left to the individual components.
 
+client.interceptors.request.use(
+
+  (response) => {
+    return response;
+  },
+  (error) => {
+
+    if(error.response?.status === 401){
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+
+    return Promise.reject(error);
+
+  }
+
+)
+
 export default client;
