@@ -10,7 +10,11 @@ router.use(authMiddleware);
 // Broken Flow 3: Returns all events, including those the user is not invited to
 router.get('/', (req, res) => {
     // FIX in solution: filter events where req.user.id is creator or req.user.email is in invitedEmails
-    res.json(events);
+    const visibleEvents = events.filter(event => 
+        event.creatorId === req.user.id ||
+        event.invitedEmails.includes(req.user.email)
+    )
+    res.json(visibleEvents);
 });
 
 router.post('/', (req, res) => {
@@ -27,6 +31,7 @@ router.post('/', (req, res) => {
     events.push(newEvent);
     console.log(`Invitations sent for event "${title}" to: ${newEvent.invitedEmails.join(', ')}`);
     res.status(201).json(newEvent);
+    
 });
 
 // Broken Flow 1: Any user can view any event
