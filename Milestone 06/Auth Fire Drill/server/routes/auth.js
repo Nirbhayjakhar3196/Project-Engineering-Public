@@ -4,6 +4,8 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { users } = require('../data/store');
 const { signToken } = require('../auth/jwt');
+const blacklist = require('../data/blacklist');
+const auth = require('../middleware/roleCheck');
 
 router.post('/signup', async (req, res) => {
   const { email, password, role } = req.body;
@@ -32,5 +34,19 @@ router.post('/login', async (req, res) => {
   // Return role so frontend can store it (which is broken but requested)
   res.json({ token, user: { id: user.id, email: user.email, role: user.role } });
 });
+
+router.post('/logout' ,auth, (req,res)=> {
+
+  const token = req.headers.authorization?.split(" ")[1];
+
+  if(token){
+    blacklist.push(token)
+  }
+
+  res.json({
+    message : "Logout Successfully"
+  })
+
+})
 
 module.exports = router;
